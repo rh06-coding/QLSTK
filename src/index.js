@@ -3,6 +3,8 @@ const express = require("express");
 const { connectDB, closeDB } = require("./config/db");
 const healthRouter = require("./routes/health");
 const authRouter = require("./routes/auth");
+const regulationsRouter = require("./routes/regulations");
+const errorHandler = require("./middlewares/errorHandler");
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -10,6 +12,7 @@ const port = Number(process.env.PORT || 3000);
 app.use(express.json());
 app.use("/api", healthRouter);
 app.use("/api", authRouter);
+app.use("/api", regulationsRouter);
 
 app.get("/", (req, res) => {
   res.json({
@@ -17,6 +20,8 @@ app.get("/", (req, res) => {
     status: "running",
   });
 });
+
+app.use(errorHandler);
 
 let server;
 

@@ -2,15 +2,10 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { sql, getPool } = require("../config/db");
 
+const HttpError = require("../utils/HttpError");
+
 const INVALID_CREDENTIALS_MESSAGE = "Sai tên đăng nhập hoặc mật khẩu";
 const MISSING_CREDENTIALS_MESSAGE = "Vui lòng cung cấp đầy đủ username và password";
-
-class HttpError extends Error {
-  constructor(statusCode, message) {
-    super(message);
-    this.statusCode = statusCode;
-  }
-}
 
 function validateLoginPayload(body) {
   const { username, password } = body || {};
@@ -100,8 +95,51 @@ async function loginWithCredentials(credentials) {
   };
 }
 
+async function registerUser({ username, password, MaVaiTro, MaKH }) {
+  if (!username || !password || !MaVaiTro) {
+    throw new HttpError(400, "Vui lòng cung cấp đầy đủ username, password và MaVaiTro");
+  }
+
+  const existingUser = await findUserByUsername(username);
+  if (existingUser) {
+    throw new HttpError(409, "Tên đăng nhập đã tồn tại");
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const pool = getPool();
+  const result = await pool
+    .request()
+    .input("username", sql.VarChar(50), username)
+    .input("hashedPassword", sql.VarChar(255), hashedPassword)
+    .input("MaVaiTro", sql.Int, MaVaiTro)
+    .input("MaKH", sql.Int, MaKH)
+    .query(`
+      INSERT INTO NGUOI_DUNG (TenDangNhap, MatKhau, MaVaiTro, MaKH)
+      OUTPUT INSERTED.MaNguoiDung
+      VALUES (@username, @hashedPassword, @MaVaiTro, @MaKH)
+    `);
+
+  return { MaNguoiDung: result.recordset[0].MaNguoiDung };
+}
+
+async function getUserById(MaNguoiDung) {
+  const pool = getPool();
+  const result = await pool
+    .request()
+    .input("id", sql.Int, MaNguoiDung)
+    .query(`
+      SELECT nd.MaNguoiDung, nd.TenDangNhap, nd.MaVaiTro, nd.MaKH, vt.TenVaiTro
+      FROM NGUOI_DUNG nd
+      LEFT JOIN VAI_TRO vt ON nd.MaVaiTro = vt.MaVaiTro
+      WHERE nd.MaNguoiDung = @id
+    `);
+  return result.recordset[0] || null;
+}
+
 module.exports = {
   HttpError,
   loginWithCredentials,
   validateLoginPayload,
+  registerUser,
+  getUserById,
 };

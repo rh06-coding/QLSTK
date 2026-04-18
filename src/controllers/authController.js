@@ -1,10 +1,12 @@
+const HttpError = require("../utils/HttpError");
 const {
-  HttpError,
   loginWithCredentials,
   validateLoginPayload,
+  registerUser,
+  getUserById,
 } = require("../services/authService");
 
-async function login(req, res) {
+async function login(req, res, next) {
   try {
     const credentials = validateLoginPayload(req.body);
     const authData = await loginWithCredentials(credentials);
@@ -14,20 +16,55 @@ async function login(req, res) {
       data: authData,
     });
   } catch (error) {
-    if (error instanceof HttpError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-      });
+    next(error);
+  }
+}
+
+async function register(req, res, next) {
+  try {
+    const { username, password, MaVaiTro, MaKH } = req.body;
+    if (!username || !password || !MaVaiTro) {
+      throw new HttpError(400, "Vui lòng cung cấp đầy đủ username, password và MaVaiTro");
     }
 
-    return res.status(500).json({
-      success: false,
-      message: "Đăng nhập thất bại",
+    const result = await registerUser({ username, password, MaVaiTro, MaKH });
+    
+    return res.status(201).json({
+      success: true,
+      message: "Tạo tài khoản thành công",
+      data: result,
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function logout(req, res) {
+  return res.status(200).json({
+    success: true,
+    message: "Đăng xuất thành công",
+  });
+}
+
+async function getMe(req, res, next) {
+  try {
+    const user = await getUserById(req.user.MaNguoiDung);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    next(error);
   }
 }
 
 module.exports = {
   login,
+  register,
+  logout,
+  getMe,
 };

@@ -68,6 +68,12 @@ USING (VALUES
   (N'Health Check', '/api/health', 'GET'),
   (N'Dang nhap', '/api/auth/login', 'POST'),
   (N'Dang ky', '/api/auth/register', 'POST'),
+  (N'Dang xuat', '/api/auth/logout', 'POST'),
+  (N'Thong tin ca nhan', '/api/auth/me', 'GET'),
+  (N'Xem danh sach loai tiet kiem', '/api/regulations', 'GET'),
+  (N'Them loai tiet kiem', '/api/regulations', 'POST'),
+  (N'Cap nhat loai tiet kiem', '/api/regulations/:id', 'PUT'),
+  (N'Xoa loai tiet kiem', '/api/regulations/:id', 'DELETE'),
   (N'Tao so tiet kiem', '/api/savings', 'POST'),
   (N'Xem chi tiet so tiet kiem', '/api/savings/:id', 'GET'),
   (N'Gui tien vao so', '/api/savings/:id/deposit', 'POST'),
@@ -84,6 +90,12 @@ WHEN MATCHED THEN
   SELECT 'ADMIN' AS TenVaiTro, '/api/health' AS URL, 'GET' AS Method UNION ALL
   SELECT 'ADMIN', '/api/auth/login', 'POST' UNION ALL
   SELECT 'ADMIN', '/api/auth/register', 'POST' UNION ALL
+  SELECT 'ADMIN', '/api/auth/logout', 'POST' UNION ALL
+  SELECT 'ADMIN', '/api/auth/me', 'GET' UNION ALL
+  SELECT 'ADMIN', '/api/regulations', 'GET' UNION ALL
+  SELECT 'ADMIN', '/api/regulations', 'POST' UNION ALL
+  SELECT 'ADMIN', '/api/regulations/:id', 'PUT' UNION ALL
+  SELECT 'ADMIN', '/api/regulations/:id', 'DELETE' UNION ALL
   SELECT 'ADMIN', '/api/savings', 'POST' UNION ALL
   SELECT 'ADMIN', '/api/savings/:id', 'GET' UNION ALL
   SELECT 'ADMIN', '/api/savings/:id/deposit', 'POST' UNION ALL
@@ -91,12 +103,17 @@ WHEN MATCHED THEN
 
   SELECT 'NHAN_VIEN', '/api/health', 'GET' UNION ALL
   SELECT 'NHAN_VIEN', '/api/auth/login', 'POST' UNION ALL
+  SELECT 'NHAN_VIEN', '/api/auth/logout', 'POST' UNION ALL
+  SELECT 'NHAN_VIEN', '/api/auth/me', 'GET' UNION ALL
+  SELECT 'NHAN_VIEN', '/api/regulations', 'GET' UNION ALL
   SELECT 'NHAN_VIEN', '/api/savings', 'POST' UNION ALL
   SELECT 'NHAN_VIEN', '/api/savings/:id', 'GET' UNION ALL
   SELECT 'NHAN_VIEN', '/api/savings/:id/deposit', 'POST' UNION ALL
   SELECT 'NHAN_VIEN', '/api/savings/:id/withdraw', 'POST' UNION ALL
 
   SELECT 'KHACH_HANG', '/api/health', 'GET' UNION ALL
+  SELECT 'KHACH_HANG', '/api/auth/logout', 'POST' UNION ALL
+  SELECT 'KHACH_HANG', '/api/auth/me', 'GET' UNION ALL
   SELECT 'KHACH_HANG', '/api/savings/:id', 'GET' UNION ALL
   SELECT 'KHACH_HANG', '/api/savings/:id/deposit', 'POST' UNION ALL
   SELECT 'KHACH_HANG', '/api/savings/:id/withdraw', 'POST'
