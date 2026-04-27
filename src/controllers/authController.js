@@ -1,10 +1,10 @@
 const HttpError = require("../utils/HttpError");
 const {
   loginWithCredentials,
-  validateLoginPayload,
   registerUser,
   getUserById,
 } = require("../services/authService");
+const { validateLoginPayload, validateRegisterPayload } = require("../utils/validators");
 
 async function login(req, res, next) {
   try {
@@ -22,12 +22,8 @@ async function login(req, res, next) {
 
 async function register(req, res, next) {
   try {
-    const { username, password, MaVaiTro, MaKH } = req.body;
-    if (!username || !password || !MaVaiTro) {
-      throw new HttpError(400, "Vui lòng cung cấp đầy đủ username, password và MaVaiTro");
-    }
-
-    const result = await registerUser({ username, password, MaVaiTro, MaKH });
+    const payload = validateRegisterPayload(req.body);
+    const result = await registerUser(payload);
     
     return res.status(201).json({
       success: true,
