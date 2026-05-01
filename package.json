@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "db:seed-rbac": "node src/scripts/seed-rbac.js",
-    "db:seed-admin": "node src/scripts/seed-admin.js",
+    "db:check": "node src/scripts/check-db.js",
     "test": "echo \"No tests configured\""
   },
   "keywords": [],
