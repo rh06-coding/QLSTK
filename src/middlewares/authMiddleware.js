@@ -1,29 +1,39 @@
 const jwt = require("jsonwebtoken");
+const HttpError = require("../utils/HttpError");
 
 function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ success: false, message: "Không có token xác thực" });
+    return next(new HttpError(401, "Không có token xác thực"));
   }
 
   const token = authHeader.split(" ")[1];
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    return next(new Error("JWT_SECRET is not configured"));
+  }
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, jwtSecret);
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(401).json({ success: false, message: "Token không hợp lệ hoặc đã hết hạn" });
+    if (error.name === "TokenExpiredError") {
+      return next(new HttpError(401, "Token đã hết hạn"));
+    }
+    return next(new HttpError(401, "Token không hợp lệ"));
   }
 }
 
 function checkRole(allowedRoles = []) {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ success: false, message: "Yêu cầu xác thực" });
+      return next(new HttpError(401, "Yêu cầu xác thực"));
     }
 
     if (!allowedRoles.includes(req.user.TenVaiTro)) {
-      return res.status(403).json({ success: false, message: "Bạn không có quyền truy cập chức năng này" });
+      return next(new HttpError(403, "Bạn không có quyền truy cập chức năng này"));
     }
 
     next();
