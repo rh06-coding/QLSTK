@@ -4,9 +4,9 @@ const { connectDB, closeDB } = require("../config/db");
 async function checkDatabase() {
   try {
     const pool = await connectDB();
-    console.log("✅ Kết nối database thành công!\n");
+    console.log("Ket noi database thanh cong!\n");
 
-    // 1. Liệt kê tất cả các bảng
+    //listalltables
     const tables = await pool.request().query(
       "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME"
     );
@@ -15,10 +15,10 @@ async function checkDatabase() {
       const countResult = await pool.request().query(
         `SELECT COUNT(*) AS cnt FROM [${row.TABLE_NAME}]`
       );
-      console.log(`  📋 ${row.TABLE_NAME}: ${countResult.recordset[0].cnt} rows`);
+      console.log(`  Table: ${row.TABLE_NAME}: ${countResult.recordset[0].cnt} rows`);
     }
 
-    // 2. Liệt kê stored procedures
+    //listallprocs
     const procs = await pool.request().query(
       "SELECT name FROM sys.procedures ORDER BY name"
     );
@@ -26,10 +26,10 @@ async function checkDatabase() {
     if (procs.recordset.length === 0) {
       console.log("  (không có)");
     } else {
-      procs.recordset.forEach(r => console.log(`  ⚙️  ${r.name}`));
+      procs.recordset.forEach(r => console.log(`  Proc: ${r.name}`));
     }
 
-    // 3. Liệt kê constraints
+    //checkconstraints
     const constraints = await pool.request().query(`
       SELECT 
         tc.TABLE_NAME,
@@ -43,12 +43,12 @@ async function checkDatabase() {
     for (const row of constraints.recordset) {
       if (row.TABLE_NAME !== currentTable) {
         currentTable = row.TABLE_NAME;
-        console.log(`\n  📋 ${currentTable}:`);
+        console.log(`\n  Table: ${currentTable}:`);
       }
       console.log(`    - [${row.CONSTRAINT_TYPE}] ${row.CONSTRAINT_NAME}`);
     }
 
-    // 4. Liệt kê indexes
+    //checkindexes
     const indexes = await pool.request().query(`
       SELECT 
         t.name AS TableName,
@@ -65,29 +65,29 @@ async function checkDatabase() {
     for (const row of indexes.recordset) {
       if (row.TableName !== currentTable) {
         currentTable = row.TableName;
-        console.log(`\n  📋 ${currentTable}:`);
+        console.log(`\n  Table: ${currentTable}:`);
       }
       console.log(`    - ${row.IndexName} (${row.IndexType}, Unique: ${row.IsUnique})`);
     }
 
-    // 5. Xem dữ liệu mẫu trong một số bảng quan trọng
+    //viewsamples
     console.log("\n\n=== DỮ LIỆU MẪU ===");
 
-    // VAI_TRO
+    //roles
     const roles = await pool.request().query("SELECT * FROM VAI_TRO");
     if (roles.recordset.length > 0) {
       console.log("\n  VAI_TRO:");
       roles.recordset.forEach(r => console.log(`    MaVaiTro=${r.MaVaiTro}, TenVaiTro=${r.TenVaiTro}`));
     }
 
-    // CHUC_NANG
+    //functions
     const funcs = await pool.request().query("SELECT * FROM CHUC_NANG");
     if (funcs.recordset.length > 0) {
       console.log("\n  CHUC_NANG:");
       funcs.recordset.forEach(r => console.log(`    MaChucNang=${r.MaChucNang}, ${r.TenChucNang}, ${r.Method} ${r.URL}`));
     }
 
-    // NGUOI_DUNG
+    //users
     const users = await pool.request().query(
       "SELECT nd.MaNguoiDung, nd.TenDangNhap, nd.MaVaiTro, vt.TenVaiTro FROM NGUOI_DUNG nd LEFT JOIN VAI_TRO vt ON nd.MaVaiTro = vt.MaVaiTro"
     );
@@ -96,16 +96,16 @@ async function checkDatabase() {
       users.recordset.forEach(r => console.log(`    MaNguoiDung=${r.MaNguoiDung}, ${r.TenDangNhap}, VaiTro=${r.TenVaiTro}`));
     }
 
-    // LOAI_TIET_KIEM
+    //regulationtypes
     const ltk = await pool.request().query("SELECT * FROM LOAI_TIET_KIEM");
     if (ltk.recordset.length > 0) {
       console.log("\n  LOAI_TIET_KIEM:");
       ltk.recordset.forEach(r => console.log(`    MaLTK=${r.MaLTK}, ${r.TenLTK}, KyHan=${r.KyHan}, LaiSuat=${r.LaiSuat}`));
     }
 
-    console.log("\n\n✅ Kiểm tra hoàn tất!");
+    console.log("\n\nKiem tra hoan tat!");
   } catch (error) {
-    console.error("❌ Lỗi:", error.message);
+    console.error("Loi:", error.message);
   } finally {
     await closeDB();
     process.exit(0);

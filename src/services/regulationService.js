@@ -58,10 +58,10 @@ async function updateRegulation(MaLTK, { LaiSuat, SoTienGuiToiThieu, SoTienGuiTh
 async function deleteRegulation(MaLTK) {
   const pool = getPool();
   
-  // Check FK constraint
-  // We need to handle this conditionally as SO_TIET_KIEM might not exist yet if they haven't migrated everything.
-  // Actually, let's just query it inside a try-catch for SQL error or check if table exists or just query.
-  // The plan specified querying SO_TIET_KIEM.
+  //checkfkconstraint
+  //handleconditionally
+  //querysafely
+  //perplan
   const checkFkResult = await pool.request()
     .input("id", sql.Int, MaLTK)
     .query(`
