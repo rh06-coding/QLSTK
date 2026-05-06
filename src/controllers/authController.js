@@ -1,4 +1,5 @@
 const HttpError = require("../utils/HttpError");
+const asyncHandler = require("../utils/asyncHandler");
 const {
   loginWithCredentials,
   registerUser,
@@ -6,57 +7,45 @@ const {
 } = require("../services/authService");
 const { validateLoginPayload, validateRegisterPayload } = require("../utils/validators");
 
-async function login(req, res, next) {
-  try {
-    const credentials = validateLoginPayload(req.body);
-    const authData = await loginWithCredentials(credentials);
+const login = asyncHandler(async (req, res) => {
+  const credentials = validateLoginPayload(req.body);
+  const authData = await loginWithCredentials(credentials);
 
-    return res.status(200).json({
-      success: true,
-      data: authData,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
+  return res.status(200).json({
+    success: true,
+    data: authData,
+  });
+});
 
-async function register(req, res, next) {
-  try {
-    const payload = validateRegisterPayload(req.body);
-    const result = await registerUser(payload);
-    
-    return res.status(201).json({
-      success: true,
-      message: "Tạo tài khoản thành công",
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
+const register = asyncHandler(async (req, res) => {
+  const payload = validateRegisterPayload(req.body);
+  const result = await registerUser(payload);
 
-async function logout(req, res) {
+  return res.status(201).json({
+    success: true,
+    message: "Tạo tài khoản thành công",
+    data: result,
+  });
+});
+
+const logout = asyncHandler(async (req, res) => {
   return res.status(200).json({
     success: true,
     message: "Đăng xuất thành công",
   });
-}
+});
 
-async function getMe(req, res, next) {
-  try {
-    const user = await getUserById(req.user.MaNguoiDung);
-    if (!user) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
-    }
-    
-    return res.status(200).json({
-      success: true,
-      data: user,
-    });
-  } catch (error) {
-    next(error);
+const getMe = asyncHandler(async (req, res) => {
+  const user = await getUserById(req.user.MaNguoiDung);
+  if (!user) {
+    throw new HttpError(404, "Không tìm thấy người dùng");
   }
-}
+
+  return res.status(200).json({
+    success: true,
+    data: user,
+  });
+});
 
 module.exports = {
   login,
