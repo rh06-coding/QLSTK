@@ -4,6 +4,9 @@ const { connectDB, closeDB } = require("./config/db");
 const healthRouter = require("./routes/health");
 const authRouter = require("./routes/auth");
 const regulationsRouter = require("./routes/regulations");
+const customerRouter = require("./routes/customers"); 
+const savingsRouter = require("./routes/savings");
+const reportsRouter = require("./routes/reports");
 const errorHandler = require("./middlewares/errorHandler");
 
 const app = express();
@@ -13,6 +16,9 @@ app.use(express.json());
 app.use("/api", healthRouter);
 app.use("/api", authRouter);
 app.use("/api", regulationsRouter);
+app.use("/api", customerRouter); 
+app.use("/api", savingsRouter);
+app.use("/api", reportsRouter);
 
 app.get("/", (req, res) => {
   res.json({
