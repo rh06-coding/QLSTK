@@ -5,17 +5,6 @@ const { sql, getPool } = require("../config/db");
 const HttpError = require("../utils/HttpError");
 
 const INVALID_CREDENTIALS_MESSAGE = "Sai tên đăng nhập hoặc mật khẩu";
-const MISSING_CREDENTIALS_MESSAGE = "Vui lòng cung cấp đầy đủ username và password";
-
-function validateLoginPayload(body) {
-  const { username, password } = body || {};
-
-  if (!username || !password) {
-    throw new HttpError(400, MISSING_CREDENTIALS_MESSAGE);
-  }
-
-  return { username, password };
-}
 
 async function findUserByUsername(username) {
   const pool = getPool();
@@ -96,9 +85,6 @@ async function loginWithCredentials(credentials) {
 }
 
 async function registerUser({ username, password, MaVaiTro, MaKH }) {
-  if (!username || !password || !MaVaiTro) {
-    throw new HttpError(400, "Vui lòng cung cấp đầy đủ username, password và MaVaiTro");
-  }
 
   const existingUser = await findUserByUsername(username);
   if (existingUser) {
@@ -137,9 +123,7 @@ async function getUserById(MaNguoiDung) {
 }
 
 module.exports = {
-  HttpError,
   loginWithCredentials,
-  validateLoginPayload,
   registerUser,
   getUserById,
 };

@@ -1,5 +1,8 @@
 require("dotenv").config();
 const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const { rateLimit } = require("express-rate-limit");
 const { connectDB, closeDB } = require("./config/db");
 const healthRouter = require("./routes/health");
 const authRouter = require("./routes/auth");
@@ -9,11 +12,44 @@ const savingsRouter = require("./routes/savings");
 const reportsRouter = require("./routes/reports");
 const errorHandler = require("./middlewares/errorHandler");
 
+//checkenv
+const REQUIRED_ENV = ["JWT_SECRET", "DB_USER", "DB_NAME"];
+for (const key of REQUIRED_ENV) {
+  if (!process.env[key]) {
+    console.error(`Biến môi trường bắt buộc '${key}' chưa được cấu hình. Kiểm tra file .env`);
+    process.exit(1);
+  }
+}
+
 const app = express();
 const port = Number(process.env.PORT || 3000);
 
-app.use(express.json());
+//securitystuff
+app.use(helmet());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+//limitbruteforce
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, //15mins
+  max: 20, //max20reqs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Quá nhiều yêu cầu, vui lòng thử lại sau 15 phút",
+  },
+});
+
+//configbodylimit
+app.use(express.json({ limit: "10kb" }));
+
+//endpoints
 app.use("/api", healthRouter);
+app.use("/api/auth", authLimiter);
 app.use("/api", authRouter);
 app.use("/api", regulationsRouter);
 app.use("/api", customerRouter); 
@@ -27,6 +63,7 @@ app.get("/", (req, res) => {
   });
 });
 
+//handleerrors
 app.use(errorHandler);
 
 let server;

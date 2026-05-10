@@ -1,4 +1,5 @@
-Create database QLSOTIETKIEM
+use QLSOTIETKIEM
+go
 
 CREATE TABLE KHACH_HANG(
 	MaKH int primary key IDENTITY(1,1) not null,
@@ -255,7 +256,7 @@ BEGIN
 END;
 GO
 
-USE QLSOTIETKIEM
+USE QLSOTIETKIEM    
 GO 
 
 ---------------------------------------------------------

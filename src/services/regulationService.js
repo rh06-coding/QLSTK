@@ -12,13 +12,6 @@ async function getAllRegulations() {
 }
 
 async function createRegulation({ KyHan, TenLTK, LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu }) {
-  if (KyHan === undefined || !TenLTK || LaiSuat === undefined || SoTienGuiToiThieu === undefined || SoTienGuiThemToiThieu === undefined) {
-    throw new HttpError(400, "Vui lòng cung cấp đầy đủ thông tin loại tiết kiệm");
-  }
-
-  if (KyHan < 0 || LaiSuat <= 0 || SoTienGuiToiThieu < 0 || SoTienGuiThemToiThieu < 0) {
-    throw new HttpError(400, "Thông tin loại tiết kiệm không hợp lệ (số âm hoặc lãi suất <= 0)");
-  }
 
   const pool = getPool();
   const result = await pool
@@ -38,13 +31,6 @@ async function createRegulation({ KyHan, TenLTK, LaiSuat, SoTienGuiToiThieu, SoT
 }
 
 async function updateRegulation(MaLTK, { LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu }) {
-  if (LaiSuat === undefined || SoTienGuiToiThieu === undefined || SoTienGuiThemToiThieu === undefined) {
-    throw new HttpError(400, "Vui lòng cung cấp đầy đủ LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu");
-  }
-
-  if (LaiSuat <= 0 || SoTienGuiToiThieu < 0 || SoTienGuiThemToiThieu < 0) {
-    throw new HttpError(400, "Thông tin loại tiết kiệm không hợp lệ (số âm hoặc lãi suất <= 0)");
-  }
 
   const pool = getPool();
   const checkResult = await pool.request().input("id", sql.Int, MaLTK).query(`SELECT 1 FROM LOAI_TIET_KIEM WHERE MaLTK = @id`);
@@ -72,10 +58,10 @@ async function updateRegulation(MaLTK, { LaiSuat, SoTienGuiToiThieu, SoTienGuiTh
 async function deleteRegulation(MaLTK) {
   const pool = getPool();
   
-  // Check FK constraint
-  // We need to handle this conditionally as SO_TIET_KIEM might not exist yet if they haven't migrated everything.
-  // Actually, let's just query it inside a try-catch for SQL error or check if table exists or just query.
-  // The plan specified querying SO_TIET_KIEM.
+  //checkfkconstraint
+  //handleconditionally
+  //querysafely
+  //perplan
   const checkFkResult = await pool.request()
     .input("id", sql.Int, MaLTK)
     .query(`
