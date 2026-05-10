@@ -1,25 +1,18 @@
 const customerService = require("../services/customerService");
+const asyncHandler = require("../utils/asyncHandler");
 
-async function getAll(req, res, next) {
-  try {
-    const data = await customerService.getAllCustomers();
-    return res.status(200).json({ success: true, data });
-  } catch (error) {
-    next(error);
-  }
-}
+const getAll = asyncHandler(async (req, res) => {
+  const data = await customerService.getAllCustomers();
+  return res.status(200).json({ success: true, data });
+});
 
-async function create(req, res, next) {
-  try {
-    const result = await customerService.createCustomer(req.body);
-    return res.status(201).json({
-      success: true,
-      message: "Tạo khách hàng thành công",
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
+const create = asyncHandler(async (req, res) => {
+  const result = await customerService.createCustomer(req.body);
+  return res.status(201).json({
+    success: true,
+    message: "Tạo khách hàng thành công",
+    data: result,
+  });
+});
 
-module.exports = { getAll, create };
+module.exports = { getAll, create };

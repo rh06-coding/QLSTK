@@ -1,9 +1,7 @@
 const { sql, getPool } = require("../config/db");
 const HttpError = require("../utils/HttpError");
 
-// ──────────────────────────────────────────────
 // Báo cáo doanh số hoạt động ngày (BM5.1)
-// ──────────────────────────────────────────────
 async function getDailyRevenue(date) {
   if (!date) {
     throw new HttpError(400, "Vui lòng cung cấp ngày (date=YYYY-MM-DD)");
@@ -47,9 +45,7 @@ async function getDailyRevenue(date) {
   return filtered;
 }
 
-// ──────────────────────────────────────────────
 // Báo cáo mở/đóng sổ tháng (BM5.2)
-// ──────────────────────────────────────────────
 async function getMonthlyOpenClose(maLTK, month, year) {
   if (!maLTK || !month || !year) {
     throw new HttpError(400, "Vui lòng cung cấp maLTK, month và year");
