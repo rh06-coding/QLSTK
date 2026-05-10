@@ -31,6 +31,20 @@ async function verifyPassword(plainPassword, hashedPassword) {
   return bcrypt.compare(plainPassword, hashedPassword);
 }
 
+async function findRoleById(MaVaiTro) {
+  const pool = getPool();
+  const result = await pool
+    .request()
+    .input("MaVaiTro", sql.Int, MaVaiTro)
+    .query(`
+      SELECT MaVaiTro, TenVaiTro
+      FROM VAI_TRO
+      WHERE MaVaiTro = @MaVaiTro
+    `);
+
+  return result.recordset[0] || null;
+}
+
 function buildTokenPayload(userRecord) {
   return {
     MaNguoiDung: userRecord.MaNguoiDung,
@@ -84,11 +98,16 @@ async function loginWithCredentials(credentials) {
   };
 }
 
-async function registerUser({ username, password, MaVaiTro, MaKH }) {
+async function registerUser({ username, password, MaVaiTro }) {
 
   const existingUser = await findUserByUsername(username);
   if (existingUser) {
     throw new HttpError(409, "Tên đăng nhập đã tồn tại");
+  }
+
+  const role = await findRoleById(MaVaiTro);
+  if (!role) {
+    throw new HttpError(400, "Mã vai trò không hợp lệ");
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -98,11 +117,10 @@ async function registerUser({ username, password, MaVaiTro, MaKH }) {
     .input("username", sql.VarChar(50), username)
     .input("hashedPassword", sql.VarChar(255), hashedPassword)
     .input("MaVaiTro", sql.Int, MaVaiTro)
-    .input("MaKH", sql.Int, MaKH)
     .query(`
       INSERT INTO NGUOI_DUNG (TenDangNhap, MatKhau, MaVaiTro, MaKH)
       OUTPUT INSERTED.MaNguoiDung
-      VALUES (@username, @hashedPassword, @MaVaiTro, @MaKH)
+      VALUES (@username, @hashedPassword, @MaVaiTro, NULL)
     `);
 
   return { MaNguoiDung: result.recordset[0].MaNguoiDung };
