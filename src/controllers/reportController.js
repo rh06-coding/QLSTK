@@ -1,21 +1,18 @@
 const reportService = require("../services/reportService");
+const asyncHandler = require("../utils/asyncHandler");
 
-async function dailyRevenue(req, res, next) {
-  try {
-    const { date } = req.query;
-    const data = await reportService.getDailyRevenue(date);
-    return res.status(200).json({ success: true, data });
-  } catch (error) { next(error); }
-}
+const dailyRevenue = asyncHandler(async (req, res) => {
+  const { date } = req.query;
+  const data = await reportService.getDailyRevenue(date);
+  return res.status(200).json({ success: true, data });
+});
 
-async function monthlyOpenClose(req, res, next) {
-  try {
-    const { maLTK, month, year } = req.query;
-    const data = await reportService.getMonthlyOpenClose(
-      parseInt(maLTK), parseInt(month), parseInt(year)
-    );
-    return res.status(200).json({ success: true, data });
-  } catch (error) { next(error); }
-}
+const monthlyOpenClose = asyncHandler(async (req, res) => {
+  const { maLTK, month, year } = req.query;
+  const data = await reportService.getMonthlyOpenClose(
+    parseInt(maLTK), parseInt(month), parseInt(year)
+  );
+  return res.status(200).json({ success: true, data });
+});
 
-module.exports = { dailyRevenue, monthlyOpenClose };
+module.exports = { dailyRevenue, monthlyOpenClose };

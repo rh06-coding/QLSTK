@@ -1,71 +1,56 @@
 const savingsService = require("../services/savingsService");
+const asyncHandler = require("../utils/asyncHandler");
 
-async function getAll(req, res, next) {
-  try {
-    let data;
+const getAll = asyncHandler(async (req, res) => {
+  let data;
 
-    if (req.user.TenVaiTro === "ADMIN") {
-      // 👑 Admin thấy tất cả
-      data = await savingsService.getAllSavings(); 
-    } else {
-      // 👤 User thường
-      const MaKH = req.user.MaKH;
-      data = await savingsService.getAllSavings(MaKH);
-    }
-
-    return res.status(200).json({ success: true, data });
-  } catch (error) {
-    next(error);
+  if (req.user.TenVaiTro === "ADMIN") {
+    data = await savingsService.getAllSavings(); 
+  } else {
+    const MaKH = req.user.MaKH;
+    data = await savingsService.getAllSavings(MaKH);
   }
-}
 
-async function getById(req, res, next) {
-  try {
-    const data = await savingsService.getSavingsById(req.params.maSTK);
-    return res.status(200).json({ success: true, data });
-  } catch (error) { next(error); }
-}
+  return res.status(200).json({ success: true, data });
+});
 
-async function search(req, res, next) {
-  try {
-    const data = await savingsService.searchSavings(req.query);
-    return res.status(200).json({ success: true, data });
-  } catch (error) { next(error); }
-}
+const getById = asyncHandler(async (req, res) => {
+  const data = await savingsService.getSavingsById(req.params.maSTK);
+  return res.status(200).json({ success: true, data });
+});
 
-async function open(req, res, next) {
-  try {
-    const result = await savingsService.openSavings(req.body);
-    return res.status(201).json({
-      success: true,
-      message: "Sổ tiết kiệm đã được tạo thành công",
-      data: result,
-    });
-  } catch (error) { next(error); }
-}
+const search = asyncHandler(async (req, res) => {
+  const data = await savingsService.searchSavings(req.query);
+  return res.status(200).json({ success: true, data });
+});
 
-async function deposit(req, res, next) {
-  try {
-    const MaSTK = parseInt(req.params.maSTK);
-    const result = await savingsService.depositMoney(MaSTK, req.body);
-    return res.status(201).json({
-      success: true,
-      message: "Phiếu gửi tiền đã được tạo thành công",
-      data: result,
-    });
-  } catch (error) { next(error); }
-}
+const open = asyncHandler(async (req, res) => {
+  const result = await savingsService.openSavings(req.body);
+  return res.status(201).json({
+    success: true,
+    message: "Sổ tiết kiệm đã được tạo thành công",
+    data: result,
+  });
+});
 
-async function withdraw(req, res, next) {
-  try {
-    const MaSTK = parseInt(req.params.maSTK);
-    const result = await savingsService.withdrawMoney(MaSTK, req.body);
-    return res.status(201).json({
-      success: true,
-      message: "Phiếu rút tiền đã được tạo thành công",
-      data: result,
-    });
-  } catch (error) { next(error); }
-}
+const deposit = asyncHandler(async (req, res) => {
+  const MaSTK = parseInt(req.params.maSTK);
+  const result = await savingsService.depositMoney(MaSTK, req.body);
+  return res.status(201).json({
+    success: true,
+    message: "Phiếu gửi tiền đã được tạo thành công",
+    data: result,
+  });
+});
+
+const withdraw = asyncHandler(async (req, res) => {
+  const MaSTK = parseInt(req.params.maSTK);
+  const result = await savingsService.withdrawMoney(MaSTK, req.body);
+  return res.status(201).json({
+    success: true,
+    message: "Phiếu rút tiền đã được tạo thành công",
+    data: result,
+  });
+});
 
 module.exports = { getAll, getById, search, open, deposit, withdraw };

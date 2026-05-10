@@ -1,9 +1,7 @@
 const { sql, getPool } = require("../config/db");
 const HttpError = require("../utils/HttpError");
 
-// ──────────────────────────────────────────────
 // 1. Lấy danh sách sổ tiết kiệm theo khách hàng
-// ──────────────────────────────────────────────
 async function getAllSavings(MaKH) {
   const pool = getPool();
   const request = pool.request();
@@ -18,7 +16,6 @@ async function getAllSavings(MaKH) {
     JOIN KHACH_HANG k ON s.MaKH = k.MaKH
   `;
 
-  // 👤 Nếu có MaKH → filter
   if (MaKH) {
     query += ` WHERE s.MaKH = @MaKH`;
     request.input("MaKH", sql.Int, MaKH);
@@ -30,9 +27,7 @@ async function getAllSavings(MaKH) {
   return result.recordset;
 }
 
-// ──────────────────────────────────────────────
 // 2. Xem chi tiết 1 sổ
-// ──────────────────────────────────────────────
 async function getSavingsById(MaSTK) {
   const pool = getPool();
   const result = await pool.request()
@@ -54,9 +49,7 @@ async function getSavingsById(MaSTK) {
   return result.recordset[0];
 }
 
-// ──────────────────────────────────────────────
 // 3. Tra cứu sổ (ít nhất 1 tiêu chí)
-// ──────────────────────────────────────────────
 async function searchSavings({ maSTK, tenKhachHang, cmnd, ngayMoSo }) {
   if (!maSTK && !tenKhachHang && !cmnd && !ngayMoSo) {
     throw new HttpError(400, "Vui lòng cung cấp ít nhất một tiêu chí tìm kiếm");
@@ -98,9 +91,7 @@ async function searchSavings({ maSTK, tenKhachHang, cmnd, ngayMoSo }) {
   return result.recordset;
 }
 
-// ──────────────────────────────────────────────
 // 4. Mở sổ tiết kiệm (+ phiếu gửi tiền đầu tiên)
-// ──────────────────────────────────────────────
 async function openSavings({ MaKH, MaLTK, SoTienGui }) {
   if (!MaKH || !MaLTK || !SoTienGui) {
     throw new HttpError(400, "Vui lòng cung cấp MaKH, MaLTK và SoTienGui");
@@ -162,9 +153,7 @@ async function openSavings({ MaKH, MaLTK, SoTienGui }) {
   }
 }
 
-// ──────────────────────────────────────────────
 // 5. Gửi tiền (gọi stored procedure)
-// ──────────────────────────────────────────────
 async function depositMoney(MaSTK, { MaKH, SoTienGui }) {
   if (!SoTienGui || SoTienGui <= 0) {
     throw new HttpError(400, "Số tiền gửi phải lớn hơn 0");
@@ -184,9 +173,7 @@ async function depositMoney(MaSTK, { MaKH, SoTienGui }) {
   }
 }
 
-// ──────────────────────────────────────────────
 // 6. Rút tiền (gọi stored procedure)
-// ──────────────────────────────────────────────
 async function withdrawMoney(MaSTK, { MaKH, SoTienRut }) {
   if (!SoTienRut || SoTienRut <= 0) {
     throw new HttpError(400, "Số tiền rút phải lớn hơn 0");
