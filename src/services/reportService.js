@@ -46,14 +46,13 @@ async function getDailyRevenue(date) {
 }
 
 // Báo cáo mở/đóng sổ tháng (BM5.2)
-async function getMonthlyOpenClose(maLTK, month, year) {
-  if (!maLTK || !month || !year) {
-    throw new HttpError(400, "Vui lòng cung cấp maLTK, month và year");
+async function getMonthlyOpenClose(month, year) {
+  if (!month || !year) {
+    throw new HttpError(400, "Vui lòng cung cấp month và year");
   }
 
   const pool = getPool();
   const result = await pool.request()
-    .input("maLTK", sql.Int, maLTK)
     .input("month", sql.Int, month)
     .input("year", sql.Int, year)
     .query(`
@@ -64,31 +63,36 @@ async function getMonthlyOpenClose(maLTK, month, year) {
         FROM DateRange
         WHERE Ngay < EOMONTH(DATEFROMPARTS(@year, @month, 1))
       ),
+      LoaiTietKiem AS (
+        SELECT MaLTK, TenLTK
+        FROM LOAI_TIET_KIEM
+      ),
       MoSo AS (
-        SELECT CAST(NgayMoSo AS DATE) AS Ngay, COUNT(*) AS SoSoMo
+        SELECT MaLTK, CAST(NgayMoSo AS DATE) AS Ngay, COUNT(*) AS SoSoMo
         FROM SO_TIET_KIEM
-        WHERE MaLTK = @maLTK
-          AND MONTH(NgayMoSo) = @month AND YEAR(NgayMoSo) = @year
-        GROUP BY CAST(NgayMoSo AS DATE)
+        WHERE MONTH(NgayMoSo) = @month AND YEAR(NgayMoSo) = @year
+        GROUP BY MaLTK, CAST(NgayMoSo AS DATE)
       ),
       DongSo AS (
-        SELECT CAST(DongSoLuc AS DATE) AS Ngay, COUNT(*) AS SoSoDong
+        SELECT MaLTK, CAST(DongSoLuc AS DATE) AS Ngay, COUNT(*) AS SoSoDong
         FROM SO_TIET_KIEM
-        WHERE MaLTK = @maLTK
-          AND DongSoLuc IS NOT NULL
+        WHERE DongSoLuc IS NOT NULL
           AND MONTH(DongSoLuc) = @month AND YEAR(DongSoLuc) = @year
-        GROUP BY CAST(DongSoLuc AS DATE)
+        GROUP BY MaLTK, CAST(DongSoLuc AS DATE)
       )
       SELECT
+        l.MaLTK,
+        l.TenLTK,
         d.Ngay,
         ISNULL(m.SoSoMo, 0) AS SoSoMo,
         ISNULL(c.SoSoDong, 0) AS SoSoDong,
         (ISNULL(m.SoSoMo, 0) - ISNULL(c.SoSoDong, 0)) AS ChenhLech
-      FROM DateRange d
-      LEFT JOIN MoSo m ON d.Ngay = m.Ngay
-      LEFT JOIN DongSo c ON d.Ngay = c.Ngay
+      FROM LoaiTietKiem l
+      CROSS JOIN DateRange d
+      LEFT JOIN MoSo m ON l.MaLTK = m.MaLTK AND d.Ngay = m.Ngay
+      LEFT JOIN DongSo c ON l.MaLTK = c.MaLTK AND d.Ngay = c.Ngay
       WHERE ISNULL(m.SoSoMo, 0) > 0 OR ISNULL(c.SoSoDong, 0) > 0
-      ORDER BY d.Ngay
+      ORDER BY l.MaLTK ASC, d.Ngay ASC, SoSoMo DESC, SoSoDong DESC
       OPTION (MAXRECURSION 31)
     `);
 

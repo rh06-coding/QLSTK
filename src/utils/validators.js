@@ -9,7 +9,7 @@ function validateLoginPayload(body) {
 }
 
 function validateRegisterPayload(body) {
-  const { username, password, MaVaiTro, MaKH } = body || {};
+  const { username, password, MaVaiTro } = body || {};
   if (!username || !password || !MaVaiTro) {
     throw new HttpError(400, "Vui lòng cung cấp đầy đủ username, password và MaVaiTro");
   }
@@ -18,29 +18,168 @@ function validateRegisterPayload(body) {
     throw new HttpError(400, "Username và password phải là chuỗi");
   }
   
-  return { username, password, MaVaiTro, MaKH };
+  const parsedRoleId = Number(MaVaiTro);
+  if (!Number.isInteger(parsedRoleId) || parsedRoleId <= 0) {
+    throw new HttpError(400, "Mã vai trò không hợp lệ");
+  }
+  
+  return { username, password, MaVaiTro: parsedRoleId };
 }
 
 function validateRegulationPayload(body) {
-  const { KyHan, TenLTK, LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu } = body || {};
-  if (KyHan === undefined || !TenLTK || LaiSuat === undefined || SoTienGuiToiThieu === undefined || SoTienGuiThemToiThieu === undefined) {
+  const {
+    loai,
+    KyHan,
+    TenLTK,
+    LaiSuat,
+    SoTienGuiToiThieu,
+    ThoiGianGuiToiThieu,
+    SoTienGuiThemToiThieu,
+  } = body || {};
+
+  const normalizedLoai = (typeof loai === "string" ? loai.trim().toLowerCase() : "");
+  const parsedKyHan = Number(KyHan);
+  const parsedLaiSuat = Number(LaiSuat);
+  const parsedSoTienGuiToiThieu = Number(SoTienGuiToiThieu);
+  const parsedThoiGianGuiToiThieu =
+    ThoiGianGuiToiThieu === undefined ? null : Number(ThoiGianGuiToiThieu);
+  const parsedSoTienGuiThemToiThieu =
+    SoTienGuiThemToiThieu === undefined ? null : Number(SoTienGuiThemToiThieu);
+
+  if (
+    !normalizedLoai ||
+    KyHan === undefined ||
+    !TenLTK ||
+    LaiSuat === undefined ||
+    SoTienGuiToiThieu === undefined
+  ) {
     throw new HttpError(400, "Vui lòng cung cấp đầy đủ thông tin loại tiết kiệm");
   }
-  if (KyHan < 0 || LaiSuat <= 0 || SoTienGuiToiThieu < 0 || SoTienGuiThemToiThieu < 0) {
+
+  if (!["co_ky_han", "khong_ky_han"].includes(normalizedLoai)) {
+    throw new HttpError(400, "Loại tiết kiệm không hợp lệ");
+  }
+
+  if (!Number.isInteger(parsedKyHan) || parsedKyHan < 0) {
+    throw new HttpError(400, "Kỳ hạn không hợp lệ");
+  }
+
+  if (normalizedLoai === "co_ky_han" && parsedKyHan <= 0) {
+    throw new HttpError(400, "Loại có kỳ hạn yêu cầu KyHan > 0");
+  }
+
+  if (normalizedLoai === "khong_ky_han" && parsedKyHan !== 0) {
+    throw new HttpError(400, "Loại không kỳ hạn yêu cầu KyHan = 0");
+  }
+
+  if (
+    Number.isNaN(parsedLaiSuat) ||
+    Number.isNaN(parsedSoTienGuiToiThieu) ||
+    parsedLaiSuat <= 0 ||
+    parsedSoTienGuiToiThieu < 0
+  ) {
     throw new HttpError(400, "Thông tin loại tiết kiệm không hợp lệ (số âm hoặc lãi suất <= 0)");
   }
-  return { KyHan, TenLTK, LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu };
+
+  if (parsedThoiGianGuiToiThieu !== null) {
+    if (!Number.isInteger(parsedThoiGianGuiToiThieu) || parsedThoiGianGuiToiThieu < 0) {
+      throw new HttpError(400, "ThoiGianGuiToiThieu không hợp lệ");
+    }
+  }
+
+  if (parsedSoTienGuiThemToiThieu !== null) {
+    if (!Number.isInteger(parsedSoTienGuiThemToiThieu) || parsedSoTienGuiThemToiThieu < 0) {
+      throw new HttpError(400, "SoTienGuiThemToiThieu không hợp lệ");
+    }
+  }
+
+  return {
+    loai: normalizedLoai,
+    KyHan: parsedKyHan,
+    TenLTK,
+    LaiSuat: parsedLaiSuat,
+    SoTienGuiToiThieu: parsedSoTienGuiToiThieu,
+    ThoiGianGuiToiThieu: parsedThoiGianGuiToiThieu,
+    SoTienGuiThemToiThieu: parsedSoTienGuiThemToiThieu,
+  };
 }
 
 function validateUpdateRegulationPayload(body) {
-  const { LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu } = body || {};
-  if (LaiSuat === undefined || SoTienGuiToiThieu === undefined || SoTienGuiThemToiThieu === undefined) {
-    throw new HttpError(400, "Vui lòng cung cấp đầy đủ LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu");
+  const {
+    loai,
+    KyHan,
+    TenLTK,
+    LaiSuat,
+    SoTienGuiToiThieu,
+    ThoiGianGuiToiThieu,
+    SoTienGuiThemToiThieu,
+  } = body || {};
+
+  const normalizedLoai = (typeof loai === "string" ? loai.trim().toLowerCase() : "");
+  const parsedKyHan = Number(KyHan);
+  const parsedLaiSuat = Number(LaiSuat);
+  const parsedSoTienGuiToiThieu = Number(SoTienGuiToiThieu);
+  const parsedThoiGianGuiToiThieu =
+    ThoiGianGuiToiThieu === undefined ? null : Number(ThoiGianGuiToiThieu);
+  const parsedSoTienGuiThemToiThieu =
+    SoTienGuiThemToiThieu === undefined ? null : Number(SoTienGuiThemToiThieu);
+
+  if (
+    !normalizedLoai ||
+    KyHan === undefined ||
+    !TenLTK ||
+    LaiSuat === undefined ||
+    SoTienGuiToiThieu === undefined
+  ) {
+    throw new HttpError(400, "Vui lòng cung cấp đầy đủ thông tin loại tiết kiệm");
   }
-  if (LaiSuat <= 0 || SoTienGuiToiThieu < 0 || SoTienGuiThemToiThieu < 0) {
+
+  if (!["co_ky_han", "khong_ky_han"].includes(normalizedLoai)) {
+    throw new HttpError(400, "Loại tiết kiệm không hợp lệ");
+  }
+
+  if (!Number.isInteger(parsedKyHan) || parsedKyHan < 0) {
+    throw new HttpError(400, "Kỳ hạn không hợp lệ");
+  }
+
+  if (normalizedLoai === "co_ky_han" && parsedKyHan <= 0) {
+    throw new HttpError(400, "Loại có kỳ hạn yêu cầu KyHan > 0");
+  }
+
+  if (normalizedLoai === "khong_ky_han" && parsedKyHan !== 0) {
+    throw new HttpError(400, "Loại không kỳ hạn yêu cầu KyHan = 0");
+  }
+
+  if (
+    Number.isNaN(parsedLaiSuat) ||
+    Number.isNaN(parsedSoTienGuiToiThieu) ||
+    parsedLaiSuat <= 0 ||
+    parsedSoTienGuiToiThieu < 0
+  ) {
     throw new HttpError(400, "Thông tin loại tiết kiệm không hợp lệ (số âm hoặc lãi suất <= 0)");
   }
-  return { LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu };
+
+  if (parsedThoiGianGuiToiThieu !== null) {
+    if (!Number.isInteger(parsedThoiGianGuiToiThieu) || parsedThoiGianGuiToiThieu < 0) {
+      throw new HttpError(400, "ThoiGianGuiToiThieu không hợp lệ");
+    }
+  }
+
+  if (parsedSoTienGuiThemToiThieu !== null) {
+    if (!Number.isInteger(parsedSoTienGuiThemToiThieu) || parsedSoTienGuiThemToiThieu < 0) {
+      throw new HttpError(400, "SoTienGuiThemToiThieu không hợp lệ");
+    }
+  }
+
+  return {
+    loai: normalizedLoai,
+    KyHan: parsedKyHan,
+    TenLTK,
+    LaiSuat: parsedLaiSuat,
+    SoTienGuiToiThieu: parsedSoTienGuiToiThieu,
+    ThoiGianGuiToiThieu: parsedThoiGianGuiToiThieu,
+    SoTienGuiThemToiThieu: parsedSoTienGuiThemToiThieu,
+  };
 }
 
 function validateId(id) {

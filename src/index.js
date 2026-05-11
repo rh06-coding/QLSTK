@@ -6,8 +6,8 @@ const { rateLimit } = require("express-rate-limit");
 const { connectDB, closeDB } = require("./config/db");
 const healthRouter = require("./routes/health");
 const authRouter = require("./routes/auth");
+const rolesRouter = require("./routes/roles");
 const regulationsRouter = require("./routes/regulations");
-const customerRouter = require("./routes/customers"); 
 const savingsRouter = require("./routes/savings");
 const reportsRouter = require("./routes/reports");
 const errorHandler = require("./middlewares/errorHandler");
@@ -24,12 +24,36 @@ for (const key of REQUIRED_ENV) {
 const app = express();
 const port = Number(process.env.PORT || 3000);
 
+const defaultCorsOrigins = [
+  "https://cnpmbank.mhoang26ct.workers.dev",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+];
+
+const allowedOrigins = (process.env.CORS_ORIGIN || defaultCorsOrigins.join(","))
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 //securitystuff
 app.use(helmet());
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "*",
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error(`CORS Blocked for origin: ${origin}`);
+      callback(new Error("Origin không được phép bởi CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
 }));
 
 //limitbruteforce
@@ -51,8 +75,8 @@ app.use(express.json({ limit: "10kb" }));
 app.use("/api", healthRouter);
 app.use("/api/auth", authLimiter);
 app.use("/api", authRouter);
+app.use("/api", rolesRouter);
 app.use("/api", regulationsRouter);
-app.use("/api", customerRouter); 
 app.use("/api", savingsRouter);
 app.use("/api", reportsRouter);
 

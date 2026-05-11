@@ -1,21 +1,9 @@
 const savingsService = require("../services/savingsService");
 const asyncHandler = require("../utils/asyncHandler");
 
-const getAll = asyncHandler(async (req, res) => {
-  let data;
-
-  if (req.user.TenVaiTro === "ADMIN") {
-    data = await savingsService.getAllSavings(); 
-  } else {
-    const MaKH = req.user.MaKH;
-    data = await savingsService.getAllSavings(MaKH);
-  }
-
-  return res.status(200).json({ success: true, data });
-});
-
-const getById = asyncHandler(async (req, res) => {
-  const data = await savingsService.getSavingsById(req.params.maSTK);
+const getByCustomer = asyncHandler(async (req, res) => {
+  const MaKH = parseInt(req.params.maKH, 10);
+  const data = await savingsService.getSavingsByCustomerId(MaKH);
   return res.status(200).json({ success: true, data });
 });
 
@@ -34,7 +22,7 @@ const open = asyncHandler(async (req, res) => {
 });
 
 const deposit = asyncHandler(async (req, res) => {
-  const MaSTK = parseInt(req.params.maSTK);
+  const MaSTK = parseInt(req.params.maSTK, 10);
   const result = await savingsService.depositMoney(MaSTK, req.body);
   return res.status(201).json({
     success: true,
@@ -44,7 +32,7 @@ const deposit = asyncHandler(async (req, res) => {
 });
 
 const withdraw = asyncHandler(async (req, res) => {
-  const MaSTK = parseInt(req.params.maSTK);
+  const MaSTK = parseInt(req.params.maSTK, 10);
   const result = await savingsService.withdrawMoney(MaSTK, req.body);
   return res.status(201).json({
     success: true,
@@ -53,4 +41,4 @@ const withdraw = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { getAll, getById, search, open, deposit, withdraw };
+module.exports = { getByCustomer, search, open, deposit, withdraw };

@@ -18,7 +18,8 @@ function errorHandler(err, req, res, next) {
   console.error("Unhandled error:", err);
   return res.status(500).json({
     success: false,
-    message: "Lỗi hệ thống nội bộ",
+    message: err.message || "Lỗi hệ thống nội bộ",
+    stack: err.stack,
   });
 }
 

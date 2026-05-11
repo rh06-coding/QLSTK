@@ -1,4 +1,6 @@
-use QLSOTIETKIEM
+CREATE DATABASE QuanLySoTietKiem;
+
+use QuanLySoTietKiem
 go
 
 CREATE TABLE KHACH_HANG(
@@ -20,13 +22,6 @@ CREATE TABLE LOAI_TIET_KIEM(
 CREATE TABLE VAI_TRO(
 	MaVaiTro int primary key IDENTITY(1,1) not null,
 	TenVaiTro varchar(50) not null
-)
-
-CREATE TABLE CHUC_NANG(
-	MaChucNang int primary key IDENTITY(1,1) not null,
-	TenChucNang nvarchar(100) not null,
-	URL varchar(255) not null,
-	Method varchar(10) not null
 )
 
 CREATE TABLE SO_TIET_KIEM(
@@ -53,10 +48,8 @@ CREATE TABLE NGUOI_DUNG(
 
 CREATE TABLE PHAN_QUYEN(
 	MaVaiTro int,
-	MaChucNang int,
 	primary key(MaVaiTro, MaChucNang),
-	CONSTRAINT FK_PQ_VAITRO FOREIGN KEY (MaVaiTro) REFERENCES VAI_TRO(MaVaiTro),
-    CONSTRAINT FK_PQ_CHUCNANG FOREIGN KEY (MaChucNang) REFERENCES CHUC_NANG(MaChucNang)
+	CONSTRAINT FK_PQ_VAITRO FOREIGN KEY (MaVaiTro) REFERENCES VAI_TRO(MaVaiTro)
 )
 
 CREATE TABLE PHIEU_GUI_TIEN(
@@ -91,15 +84,20 @@ ADD CONSTRAINT CHK_SoTienGui_ToiThieu CHECK (SoTienGui >= 100000)
 ALTER TABLE PHIEU_RUT_TIEN
 ADD CONSTRAINT CHK_SoTienRut CHECK (SoTienRut > 0)
 
+SELECT name
+FROM sys.procedures
+WHERE name = 'sp_ThucHienRutTien';
+
+
 GO
 CREATE OR ALTER PROCEDURE sp_ThucHienRutTien
-    @MaKH INT,
     @MaSTK INT,
     @SoTienRut INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
+    DECLARE @MaKH INT;
     DECLARE @SoDuHienTai INT, @NgayMoSo DATETIME, @DongSoLuc DATETIME;
     DECLARE @KyHan INT, @LaiSuat DECIMAL(10,5);
     DECLARE @SoNgayDaGui INT, @SoThangDaGui INT;
@@ -107,6 +105,7 @@ BEGIN
 
     -- Lấy thông tin sổ tiết kiệm
     SELECT
+        @MaKH = s.MaKH,
         @SoDuHienTai = s.SoDu,
         @NgayMoSo = s.NgayMoSo,
         @DongSoLuc = s.DongSoLuc,
@@ -114,14 +113,14 @@ BEGIN
         @LaiSuat = l.LaiSuat
     FROM SO_TIET_KIEM s
     JOIN LOAI_TIET_KIEM l ON s.MaLTK = l.MaLTK
-    WHERE s.MaSTK = @MaSTK AND s.MaKH = @MaKH;
+    WHERE s.MaSTK = @MaSTK;
 
     -- Lưu ngay số dòng trả về
     SET @RowCount = @@ROWCOUNT;
 
     -- Kiểm tra sổ tồn tại
     IF @RowCount = 0
-        THROW 50001, N'Lỗi: Sổ tiết kiệm không tồn tại hoặc không khớp với mã khách hàng!', 1;
+        THROW 50001, N'Lỗi: Sổ tiết kiệm không tồn tại!', 1;
 
     -- Kiểm tra sổ đã đóng chưa
     IF @DongSoLuc IS NOT NULL
@@ -185,19 +184,20 @@ GO
 
 GO
 CREATE OR ALTER PROCEDURE sp_ThucHienGuiTien
-    @MaKH INT,
     @MaSTK INT,
     @SoTienGui INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
+    DECLARE @MaKH INT;
     DECLARE @SoDuHienTai INT, @DongSoLuc DATETIME, @NgayMoSo DATETIME;
     DECLARE @SoTienGuiToiThieu INT, @KyHan INT;
     DECLARE @RowCount INT, @SoThangDaGui INT;
 
     -- Lấy thông tin sổ và loại tiết kiệm (Bổ sung thêm NgayMoSo và KyHan)
     SELECT 
+        @MaKH = s.MaKH,
         @SoDuHienTai = s.SoDu,
         @DongSoLuc = s.DongSoLuc,
         @NgayMoSo = s.NgayMoSo,
@@ -205,13 +205,13 @@ BEGIN
         @SoTienGuiToiThieu = l.SoTienGuiThemToiThieu
     FROM SO_TIET_KIEM s
     JOIN LOAI_TIET_KIEM l ON s.MaLTK = l.MaLTK
-    WHERE s.MaSTK = @MaSTK AND s.MaKH = @MaKH;
+    WHERE s.MaSTK = @MaSTK;
 
     SET @RowCount = @@ROWCOUNT;
 
     -- Kiểm tra sổ tồn tại
     IF @RowCount = 0
-        THROW 50011, N'Lỗi: Sổ tiết kiệm không tồn tại hoặc không khớp với mã khách hàng!', 1;
+        THROW 50011, N'Lỗi: Sổ tiết kiệm không tồn tại!', 1;
 
     -- Kiểm tra sổ đã đóng chưa
     IF @DongSoLuc IS NOT NULL
@@ -256,8 +256,6 @@ BEGIN
 END;
 GO
 
-USE QLSOTIETKIEM    
-GO 
 
 ---------------------------------------------------------
 -- 1. LÀM SẠCH DỮ LIỆU (Tránh lỗi khóa ngoại)
@@ -274,6 +272,56 @@ DELETE FROM KHACH_HANG;
 DECLARE @KH_A INT, @KH_B INT;
 DECLARE @LTK_0 INT, @LTK_3 INT, @LTK_6 INT;
 DECLARE @STK_1 INT, @STK_2 INT, @STK_3 INT, @STK_4 INT, @STK_5 INT;
+DECLARE @ROLE_ADMIN INT, @ROLE_CEO INT, @ROLE_STAFF INT;
+
+-- Vai trò + tài khoản mẫu
+-- Mật khẩu mặc định cho cả 3 tài khoản: 123456
+-- Bcrypt hash của 123456: $2b$10$wcLZeUvgpf6vj4sw5eQ3nOd5Y13Rj8pZ7KNgy9c1DVMCuRapFdhMa
+IF NOT EXISTS (SELECT 1 FROM VAI_TRO WHERE TenVaiTro = 'ADMIN')
+  INSERT INTO VAI_TRO (TenVaiTro) VALUES ('ADMIN');
+
+IF NOT EXISTS (SELECT 1 FROM VAI_TRO WHERE TenVaiTro = 'CEO')
+  INSERT INTO VAI_TRO (TenVaiTro) VALUES ('CEO');
+
+IF NOT EXISTS (SELECT 1 FROM VAI_TRO WHERE TenVaiTro = 'STAFF')
+  INSERT INTO VAI_TRO (TenVaiTro) VALUES ('STAFF');
+
+SELECT @ROLE_ADMIN = MaVaiTro FROM VAI_TRO WHERE TenVaiTro = 'ADMIN';
+SELECT @ROLE_CEO = MaVaiTro FROM VAI_TRO WHERE TenVaiTro = 'CEO';
+SELECT @ROLE_STAFF = MaVaiTro FROM VAI_TRO WHERE TenVaiTro = 'STAFF';
+
+IF NOT EXISTS (SELECT 1 FROM NGUOI_DUNG WHERE TenDangNhap = 'admin')
+BEGIN
+  INSERT INTO NGUOI_DUNG (TenDangNhap, MatKhau, MaVaiTro, MaKH)
+  VALUES (
+    'admin',
+    '$2b$10$wcLZeUvgpf6vj4sw5eQ3nOd5Y13Rj8pZ7KNgy9c1DVMCuRapFdhMa',
+    @ROLE_ADMIN,
+    NULL
+  );
+END
+
+IF NOT EXISTS (SELECT 1 FROM NGUOI_DUNG WHERE TenDangNhap = 'ceo')
+BEGIN
+  INSERT INTO NGUOI_DUNG (TenDangNhap, MatKhau, MaVaiTro, MaKH)
+  VALUES (
+    'ceo',
+    '$2b$10$wcLZeUvgpf6vj4sw5eQ3nOd5Y13Rj8pZ7KNgy9c1DVMCuRapFdhMa',
+    2,
+    NULL
+  );
+END
+
+IF NOT EXISTS (SELECT 1 FROM NGUOI_DUNG WHERE TenDangNhap = 'staff')
+BEGIN
+  INSERT INTO NGUOI_DUNG (TenDangNhap, MatKhau, MaVaiTro, MaKH)
+  VALUES (
+    'staff',
+    '$2b$10$wcLZeUvgpf6vj4sw5eQ3nOd5Y13Rj8pZ7KNgy9c1DVMCuRapFdhMa',
+    3,
+	NULL
+  );
+END
 
 -- KHÁCH HÀNG
 INSERT INTO KHACH_HANG (HoTen, CMND, DiaChi) VALUES (N'Nguyễn Văn A', '123456789', N'TP.HCM');
@@ -282,16 +330,24 @@ SET @KH_A = SCOPE_IDENTITY();
 INSERT INTO KHACH_HANG (HoTen, CMND, DiaChi) VALUES (N'Trần Thị B', '987654321', N'Hà Nội');
 SET @KH_B = SCOPE_IDENTITY();
 
+
+
 -- LOẠI TIẾT KIỆM
-INSERT INTO LOAI_TIET_KIEM (KyHan, TenLTK, LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu) 
+INSERT INTO LOAI_TIET_KIEM (
+  KyHan, TenLTK, LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu
+) 
 VALUES (0, N'Không kỳ hạn', 0.5, 1000000, 100000);
 SET @LTK_0 = SCOPE_IDENTITY();
 
-INSERT INTO LOAI_TIET_KIEM (KyHan, TenLTK, LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu) 
+INSERT INTO LOAI_TIET_KIEM (
+  KyHan, TenLTK, LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu
+) 
 VALUES (3, N'Kỳ hạn 3 tháng', 5.0, 1000000, 100000);
 SET @LTK_3 = SCOPE_IDENTITY();
 
-INSERT INTO LOAI_TIET_KIEM (KyHan, TenLTK, LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu) 
+INSERT INTO LOAI_TIET_KIEM (
+  KyHan, TenLTK, LaiSuat, SoTienGuiToiThieu, SoTienGuiThemToiThieu
+) 
 VALUES (6, N'Kỳ hạn 6 tháng', 5.5, 1000000, 100000);
 SET @LTK_6 = SCOPE_IDENTITY();
 
@@ -329,34 +385,34 @@ PRINT N'BẮT ĐẦU KIỂM TRA NGHIỆP VỤ';
 PRINT N'=====================================================';
 
 PRINT N'>> Case 1: Gửi thêm 500.000đ vào Sổ 1 (Hợp lệ)';
-BEGIN TRY EXEC sp_ThucHienGuiTien @KH_A, @STK_1, 500000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
+BEGIN TRY EXEC sp_ThucHienGuiTien @STK_1, 500000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
 
 PRINT N'>> Case 2: Gửi thêm 50.000đ vào Sổ 1 (Báo lỗi tối thiểu)';
-BEGIN TRY EXEC sp_ThucHienGuiTien @KH_A, @STK_1, 50000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
+BEGIN TRY EXEC sp_ThucHienGuiTien @STK_1, 50000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
 
 PRINT N'>> Case 3: Rút 300.000đ từ Sổ 1 (Hợp lệ)';
-BEGIN TRY EXEC sp_ThucHienRutTien @KH_A, @STK_1, 300000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
+BEGIN TRY EXEC sp_ThucHienRutTien @STK_1, 300000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
 
 PRINT N'>> Case 4: Rút tiền Sổ 3 (Báo lỗi chưa đáo hạn)';
-BEGIN TRY EXEC sp_ThucHienRutTien @KH_B, @STK_3, 1000000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
+BEGIN TRY EXEC sp_ThucHienRutTien @STK_3, 1000000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
 
 PRINT N'>> Case 5: Rút một phần Sổ 2 (Báo lỗi bắt buộc tất toán)';
-BEGIN TRY EXEC sp_ThucHienRutTien @KH_A, @STK_2, 1000000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
+BEGIN TRY EXEC sp_ThucHienRutTien @STK_2, 1000000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
 
 PRINT N'>> Case 6: Tất toán 5.000.000đ Sổ 2 (Hợp lệ)';
-BEGIN TRY EXEC sp_ThucHienRutTien @KH_A, @STK_2, 5000000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
+BEGIN TRY EXEC sp_ThucHienRutTien @STK_2, 5000000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
 
 PRINT N'>> Case 7: Giao dịch trên sổ đã đóng ở Case 6 (Báo lỗi)';
-BEGIN TRY EXEC sp_ThucHienGuiTien @KH_A, @STK_2, 200000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
+BEGIN TRY EXEC sp_ThucHienGuiTien @STK_2, 200000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
 
-PRINT N'>> Case 8: Khách B rút tiền Sổ 1 của Khách A (Báo lỗi)';
-BEGIN TRY EXEC sp_ThucHienRutTien @KH_B, @STK_1, 100000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
+PRINT N'>> Case 8: Rút vượt số dư Sổ 1 (Báo lỗi)';
+BEGIN TRY EXEC sp_ThucHienRutTien @STK_1, 999999999; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
 
 PRINT N'>> Case 9: Tất toán 10.000.000đ Sổ 4 kỳ hạn 6 tháng (Hợp lệ)';
-BEGIN TRY EXEC sp_ThucHienRutTien @KH_A, @STK_4, 10000000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
+BEGIN TRY EXEC sp_ThucHienRutTien @STK_4, 10000000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
 
 PRINT N'>> Case 10: Rút tiền Sổ 5 kỳ hạn 6 tháng (Báo lỗi chưa đáo hạn)';
-BEGIN TRY EXEC sp_ThucHienRutTien @KH_B, @STK_5, 8000000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
+BEGIN TRY EXEC sp_ThucHienRutTien @STK_5, 8000000; END TRY BEGIN CATCH PRINT ERROR_MESSAGE(); END CATCH;
 
 ---------------------------------------------------------
 -- 4. TỔNG HỢP KẾT QUẢ ĐỂ ĐỐI SOÁT

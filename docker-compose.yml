@@ -1,0 +1,30 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: qlstk-sqlserver
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD}
+      MSSQL_PID: Express
+    ports:
+      - "127.0.0.1:${DB_PORT:-1433}:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+
+  api:
+    build: .
+    container_name: qlstk-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_SERVER: sqlserver
+      DB_PORT: 1433
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    depends_on:
+      - sqlserver
+
+volumes:
+  sqlserver_data:

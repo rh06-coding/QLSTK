@@ -8,11 +8,9 @@ const dailyRevenue = asyncHandler(async (req, res) => {
 });
 
 const monthlyOpenClose = asyncHandler(async (req, res) => {
-  const { maLTK, month, year } = req.query;
-  const data = await reportService.getMonthlyOpenClose(
-    parseInt(maLTK), parseInt(month), parseInt(year)
-  );
+  const { month, year } = req.query;
+  const data = await reportService.getMonthlyOpenClose(parseInt(month, 10), parseInt(year, 10));
   return res.status(200).json({ success: true, data });
 });
 
-module.exports = { dailyRevenue, monthlyOpenClose };
+module.exports = { dailyRevenue, monthlyOpenClose };
