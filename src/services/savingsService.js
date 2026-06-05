@@ -33,13 +33,28 @@ async function getSavingsByCustomerId(MaKH) {
   const result = await pool.request()
     .input("MaKH", sql.Int, MaKH)
     .query(`
-    SELECT s.MaSTK, s.MaKH, s.MaLTK, s.SoDu,
+    SELECT s.MaSTK, s.MaKH, s.MaLTK,
            s.NgayMoSo, s.CapNhatLuc, s.DongSoLuc,
            l.TenLTK, l.KyHan, l.LaiSuat,
-           k.HoTen, k.CMND, k.DiaChi
+           k.HoTen, k.CMND, k.DiaChi,
+           CAST(
+               CASE 
+                   WHEN s.DongSoLuc IS NOT NULL THEN s.SoDu
+                   WHEN l.KyHan > 0 THEN
+                       CASE 
+                           WHEN DATEDIFF(MONTH, s.CapNhatLuc, GETDATE()) >= l.KyHan THEN
+                               (s.SoDu * (1.0 + (l.LaiSuat / 100.0) * (l.KyHan / 12.0))) 
+                               * (1.0 + (lkkh.LaiSuat / 100.0) * ((DATEDIFF(MONTH, s.CapNhatLuc, GETDATE()) - l.KyHan) / 12.0))
+                           ELSE s.SoDu
+                       END
+                   ELSE
+                       s.SoDu * (1.0 + (l.LaiSuat / 100.0) * (DATEDIFF(MONTH, s.CapNhatLuc, GETDATE()) / 12.0))
+               END AS INT
+           ) AS SoDu
     FROM SO_TIET_KIEM s
     JOIN LOAI_TIET_KIEM l ON s.MaLTK = l.MaLTK
     JOIN KHACH_HANG k ON s.MaKH = k.MaKH
+    LEFT JOIN LOAI_TIET_KIEM lkkh ON lkkh.KyHan = 0
     WHERE s.MaKH = @MaKH
     ORDER BY s.NgayMoSo DESC
   `);
@@ -75,10 +90,25 @@ async function searchSavings({ maSTK, tenKhachHang, cmnd }) {
 
   const result = await request.query(`
     SELECT s.MaSTK, s.MaKH, s.MaLTK, k.HoTen, k.CMND, k.DiaChi,
-           l.TenLTK, l.KyHan, l.LaiSuat, s.SoDu, s.NgayMoSo
+           l.TenLTK, l.KyHan, l.LaiSuat, s.NgayMoSo,
+           CAST(
+               CASE 
+                   WHEN s.DongSoLuc IS NOT NULL THEN s.SoDu
+                   WHEN l.KyHan > 0 THEN
+                       CASE 
+                           WHEN DATEDIFF(MONTH, s.CapNhatLuc, GETDATE()) >= l.KyHan THEN
+                               (s.SoDu * (1.0 + (l.LaiSuat / 100.0) * (l.KyHan / 12.0))) 
+                               * (1.0 + (lkkh.LaiSuat / 100.0) * ((DATEDIFF(MONTH, s.CapNhatLuc, GETDATE()) - l.KyHan) / 12.0))
+                           ELSE s.SoDu
+                       END
+                   ELSE
+                       s.SoDu * (1.0 + (l.LaiSuat / 100.0) * (DATEDIFF(MONTH, s.CapNhatLuc, GETDATE()) / 12.0))
+               END AS INT
+           ) AS SoDu
     FROM SO_TIET_KIEM s
     JOIN KHACH_HANG k ON s.MaKH = k.MaKH
     JOIN LOAI_TIET_KIEM l ON s.MaLTK = l.MaLTK
+    LEFT JOIN LOAI_TIET_KIEM lkkh ON lkkh.KyHan = 0
     WHERE ${conditions.join(" AND ")}
     ORDER BY s.NgayMoSo DESC
   `);

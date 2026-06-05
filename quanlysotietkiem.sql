@@ -98,8 +98,8 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @MaKH INT;
-    DECLARE @SoDuHienTai INT, @NgayMoSo DATETIME, @DongSoLuc DATETIME;
-    DECLARE @KyHan INT, @LaiSuat DECIMAL(10,5);
+    DECLARE @SoDuHienTai INT, @NgayMoSo DATETIME, @DongSoLuc DATETIME, @CapNhatLuc DATETIME;
+    DECLARE @KyHan INT, @LaiSuat DECIMAL(10,5), @LaiSuatKKH DECIMAL(10,5);
     DECLARE @SoNgayDaGui INT, @SoThangDaGui INT;
     DECLARE @RowCount INT;
 
@@ -109,6 +109,7 @@ BEGIN
         @SoDuHienTai = s.SoDu,
         @NgayMoSo = s.NgayMoSo,
         @DongSoLuc = s.DongSoLuc,
+        @CapNhatLuc = s.CapNhatLuc,
         @KyHan = l.KyHan,
         @LaiSuat = l.LaiSuat
     FROM SO_TIET_KIEM s
@@ -126,10 +127,6 @@ BEGIN
     IF @DongSoLuc IS NOT NULL
         THROW 50002, N'Lỗi: Sổ tiết kiệm này đã tất toán, không thể giao dịch!', 1;
 
-    -- Kiểm tra số dư
-    IF @SoTienRut > @SoDuHienTai
-        THROW 50003, N'Lỗi: Số dư không đủ để thực hiện giao dịch rút tiền!', 1;
-
     -- Tính thời gian đã gửi
     SET @SoNgayDaGui = DATEDIFF(DAY, @NgayMoSo, GETDATE());
     SET @SoThangDaGui = DATEDIFF(MONTH, @NgayMoSo, GETDATE());
@@ -144,17 +141,46 @@ BEGIN
     BEGIN
         IF @SoThangDaGui < @KyHan
             THROW 50005, N'Lỗi: Sổ có kỳ hạn chưa đến ngày đáo hạn, không được phép rút!', 1;
-
-        IF @SoTienRut != @SoDuHienTai
-            THROW 50006, N'Lỗi: Sổ có kỳ hạn bắt buộc phải rút toàn bộ (tất toán)!', 1;
     END
+
+    -- TÍNH TOÁN SỐ DƯ HIỆN TẠI BẰNG CÁCH CỘNG LÃI THEO CÔNG THỨC TRONG BÁO CÁO
+    SELECT @LaiSuatKKH = LaiSuat FROM LOAI_TIET_KIEM WHERE KyHan = 0;
+
+    DECLARE @SoDuHienTaiMoi INT = @SoDuHienTai;
+    DECLARE @SoThangTuLanCapNhat INT = DATEDIFF(MONTH, @CapNhatLuc, GETDATE());
+
+    IF @KyHan > 0
+    BEGIN
+        IF @SoThangTuLanCapNhat >= @KyHan
+        BEGIN
+            DECLARE @SDdh INT = @SoDuHienTai * (1.0 + (@LaiSuat / 100.0) * (@KyHan / 12.0));
+            DECLARE @n_du INT = @SoThangTuLanCapNhat - @KyHan;
+            SET @SoDuHienTaiMoi = @SDdh * (1.0 + (@LaiSuatKKH / 100.0) * (@n_du / 12.0));
+        END
+    END
+    ELSE
+    BEGIN
+        SET @SoDuHienTaiMoi = @SoDuHienTai * (1.0 + (@LaiSuat / 100.0) * (@SoThangTuLanCapNhat / 12.0));
+    END
+
+    -- Nếu là loại có kỳ hạn, bắt buộc rút hết. Client có thể truyền vào SoTienRut = SoDu cũ hoặc = SoDu đã tính lãi
+    IF @KyHan > 0 AND @SoTienRut != @SoDuHienTai AND @SoTienRut != @SoDuHienTaiMoi
+        THROW 50006, N'Lỗi: Sổ có kỳ hạn bắt buộc phải rút toàn bộ (tất toán)!', 1;
+        
+    -- Sửa lại SoTienRut thành toàn bộ gốc + lãi thực nhận
+    IF @KyHan > 0
+        SET @SoTienRut = @SoDuHienTaiMoi;
+
+    -- Kiểm tra số dư (áp dụng cho cả không kỳ hạn nếu muốn rút lẻ)
+    IF @SoTienRut > @SoDuHienTaiMoi
+        THROW 50003, N'Lỗi: Số dư không đủ để thực hiện giao dịch rút tiền!', 1;
 
     BEGIN TRY
         BEGIN TRANSACTION;
 
         -- Cập nhật số dư
         UPDATE SO_TIET_KIEM
-        SET SoDu = SoDu - @SoTienRut,
+        SET SoDu = @SoDuHienTaiMoi - @SoTienRut,
             CapNhatLuc = GETDATE()
         WHERE MaSTK = @MaSTK;
 
@@ -163,10 +189,10 @@ BEGIN
         VALUES (@MaKH, @MaSTK, @SoTienRut, GETDATE());
 
         -- Tự động đóng sổ nếu hết tiền
-        IF (@SoDuHienTai - @SoTienRut) = 0
+        IF (@SoDuHienTaiMoi - @SoTienRut) <= 0
         BEGIN
             UPDATE SO_TIET_KIEM
-            SET DongSoLuc = GETDATE()
+            SET DongSoLuc = GETDATE(), SoDu = 0
             WHERE MaSTK = @MaSTK;
         END
 
@@ -191,17 +217,20 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @MaKH INT;
-    DECLARE @SoDuHienTai INT, @DongSoLuc DATETIME, @NgayMoSo DATETIME;
+    DECLARE @SoDuHienTai INT, @DongSoLuc DATETIME, @NgayMoSo DATETIME, @CapNhatLuc DATETIME;
     DECLARE @SoTienGuiToiThieu INT, @KyHan INT;
+    DECLARE @LaiSuat DECIMAL(10,5), @LaiSuatKKH DECIMAL(10,5);
     DECLARE @RowCount INT, @SoThangDaGui INT;
 
-    -- Lấy thông tin sổ và loại tiết kiệm (Bổ sung thêm NgayMoSo và KyHan)
+    -- Lấy thông tin sổ và loại tiết kiệm
     SELECT 
         @MaKH = s.MaKH,
         @SoDuHienTai = s.SoDu,
         @DongSoLuc = s.DongSoLuc,
         @NgayMoSo = s.NgayMoSo,
+        @CapNhatLuc = s.CapNhatLuc,
         @KyHan = l.KyHan,
+        @LaiSuat = l.LaiSuat,
         @SoTienGuiToiThieu = l.SoTienGuiThemToiThieu
     FROM SO_TIET_KIEM s
     JOIN LOAI_TIET_KIEM l ON s.MaLTK = l.MaLTK
@@ -231,12 +260,32 @@ BEGIN
             THROW 50014, N'Lỗi: Đối với sổ có kỳ hạn, chỉ nhận gửi thêm tiền vào đúng ngày đáo hạn!', 1;
     END
 
+    -- TÍNH TOÁN SỐ DƯ HIỆN TẠI BẰNG CÁCH CỘNG LÃI THEO CÔNG THỨC TRONG BÁO CÁO
+    SELECT @LaiSuatKKH = LaiSuat FROM LOAI_TIET_KIEM WHERE KyHan = 0;
+
+    DECLARE @SoDuHienTaiMoi INT = @SoDuHienTai;
+    DECLARE @SoThangTuLanCapNhat INT = DATEDIFF(MONTH, @CapNhatLuc, GETDATE());
+
+    IF @KyHan > 0
+    BEGIN
+        IF @SoThangTuLanCapNhat >= @KyHan
+        BEGIN
+            DECLARE @SDdh INT = @SoDuHienTai * (1.0 + (@LaiSuat / 100.0) * (@KyHan / 12.0));
+            DECLARE @n_du INT = @SoThangTuLanCapNhat - @KyHan;
+            SET @SoDuHienTaiMoi = @SDdh * (1.0 + (@LaiSuatKKH / 100.0) * (@n_du / 12.0));
+        END
+    END
+    ELSE
+    BEGIN
+        SET @SoDuHienTaiMoi = @SoDuHienTai * (1.0 + (@LaiSuat / 100.0) * (@SoThangTuLanCapNhat / 12.0));
+    END
+
     BEGIN TRY
         BEGIN TRANSACTION;
 
         -- Cộng tiền vào sổ
         UPDATE SO_TIET_KIEM
-        SET SoDu = SoDu + @SoTienGui,
+        SET SoDu = @SoDuHienTaiMoi + @SoTienGui,
             CapNhatLuc = GETDATE()
         WHERE MaSTK = @MaSTK;
 
