@@ -132,7 +132,11 @@ process.on("SIGTERM", () => {
   });
 });
 
-startServer().catch((error) => {
-  console.error("Lỗi khi khởi động server:", error.message);
-  process.exit(1);
-});
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error("Lỗi khi khởi động server:", error.message);
+    process.exit(1);
+  });
+}
+
+module.exports = app;
