@@ -28,3 +28,7 @@ jobs:
       
     - name: Run tests
       run: npm test
+      env:
+        JWT_SECRET: test_secret
+        DB_USER: test_user
+        DB_NAME: test_db

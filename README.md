@@ -305,7 +305,7 @@ Dự án sử dụng **GitHub Actions** cho CI:
 
 ## 📄 Tài liệu bổ sung
 
-- [API.md](./API.md) — Chi tiết API endpoints & request/response format
+- [API.md](./API.md) — Chi tiết API endpoints & request/response format 
 - [quanlysotietkiem.sql](./quanlysotietkiem.sql) — Script khởi tạo database
 
 ---
